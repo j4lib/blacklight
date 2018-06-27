@@ -251,11 +251,11 @@ RSpec.describe "Blacklight::Configuration" do
     end
 
     it "looks up and match field names" do
-      allow(config).to receive_messages(luke_fields: {
+      allow(config).to receive(:luke_fields).and_return(
         "some_field_facet" => {},
         "another_field_facet" => {},
-        "a_facet_field" => {},
-        })
+        "a_facet_field" => {}
+        )
       expect { |b| config.add_facet_field match: /_facet$/, &b }.to yield_control.twice
 
       expect(config.facet_fields.keys).to eq ["some_field_facet", "another_field_facet"]

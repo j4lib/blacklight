@@ -102,24 +102,7 @@ module Blacklight
 
         # look up any dynamic fields
         if field_config.match
-
-          salient_fields = luke_fields.select do |k, _v|
-            k =~ field_config.match
-          end
-
-          salient_fields.each_key do |field|
-            config = field_config.dup
-            config.match = nil
-            config.field = field
-            config.key = field
-
-            if self[config_key.pluralize][config.key]
-              self[config_key.pluralize][config.key] = config.merge(self[config_key.pluralize][config.key])
-            else
-              add_blacklight_field(config_key, config, &block)
-            end
-          end
-
+          handle_matching_fields(config_key, field_config, &block)
           return
         end
 
@@ -137,6 +120,26 @@ module Blacklight
 
       private
 
+      ##
+      # Using the Luke handler see add any fields in the index that match the field_config
+      def handle_matching_fields(config_key, field_config, &block)
+        salient_fields = luke_fields.select do |k, _v|
+          k =~ field_config.match
+        end
+
+        salient_fields.each_key do |field|
+          config = field_config.dup
+          config.match = nil
+          config.field = field
+          config.key = field
+          if self[config_key.pluralize][config.key]
+            self[config_key.pluralize][config.key] = config.merge(self[config_key.pluralize][config.key])
+          else
+            add_blacklight_field(config_key, config, &block)
+          end
+        end
+      end
+
       def luke_fields
         if @table[:luke_fields] == false
           return nil
@@ -144,10 +147,8 @@ module Blacklight
 
         @table[:luke_fields] ||= Rails.cache.fetch("blacklight_configuration/admin/luke", expires_in: 1.hour) do
           begin
-            if repository_class <= Blacklight::Solr::Repository
-              repository = repository_class.new(self)
-              repository.send_and_receive('admin/luke', params: { fl: '*', 'json.nl' => 'map' })['fields']
-            end
+            repository = repository_class.new(self)
+            repository.reflect_fields
           rescue => e
             Blacklight.logger.warn "Error retrieving field metadata: #{e}"
             false
