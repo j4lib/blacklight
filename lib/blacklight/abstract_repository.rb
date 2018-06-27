@@ -32,6 +32,12 @@ module Blacklight
       raise NotImplementedError
     end
 
+    ##
+    # Is the repository in a working state?
+    def ping
+      raise NotImplementedError
+    end
+
     private
 
     def connection_config
